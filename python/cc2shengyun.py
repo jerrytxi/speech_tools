@@ -28,17 +28,19 @@
 #  
 from pypinyin import pinyin
 import sys
+print('syllable',end=',')
+print('pinyin',end=',')
+print('shengmu',end=',')
+print('yunmu')
+
 if len(sys.argv)>1:
 	input_cc=sys.argv[1]
+	output_pinying_list=pinyin(input_cc,8,heteronym=False)
 	output_shengmu_list=pinyin(input_cc,3,heteronym=False)
 	output_yunmu_list=pinyin(input_cc,9,heteronym=False)
 	for i in range(len(output_shengmu_list)):
-		print(output_shengmu_list[i][0],end=' ')
-#		print(output_yunmu_list[i][0],end=' ')
-		
-		if output_yunmu_list[i] == output_yunmu_list[-1]:
-			print(output_yunmu_list[i][0],end='')
-		else:
-			print(output_yunmu_list[i][0],end=' ')
-else:
-	print(' ',end='')
+		print(input_cc[i],end=',')
+		print(output_pinying_list[i][0],end=',')
+		print(output_shengmu_list[i][0],end=',')
+		print(output_yunmu_list[i][0])
+
