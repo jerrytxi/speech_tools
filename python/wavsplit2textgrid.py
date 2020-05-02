@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-#  split_to_textgrid_by_pitch.py
+#  wavsplit2textgrid.py
 # 
 #License: The MIT License (MIT) 
 # 
