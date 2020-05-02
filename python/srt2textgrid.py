@@ -27,9 +27,9 @@
 #SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #  
 import os
-import os.path
+import glob
 from praatio import tgio
-from datetime import timedelta
+from datetime import datetime
 from srt import parse
 import sys
 import argparse
@@ -40,9 +40,38 @@ def validate(args):
     if not args.source_path:
         print("Error: You need to specify a source path.")
         return False
+    else:
+        if not os.path.exists(args.source_path):
+            print("Error: Source path is not a folder or file.")
+            return False       
 
-    return True    
- 
+    return True  
+
+def srtToGrid(srtFile,outputFile):
+    srtFileObj=open(srtFile)
+    subs = parse(srtFileObj.read())
+    entryList=[]
+    tMax=0
+    for sub in subs:
+        startTime=sub.start.total_seconds()
+        endTime=sub.end.total_seconds()
+        label=sub.content
+        intTier=(startTime,endTime,label)
+        entryList.append(intTier)
+        tMax=endTime
+    srtFileObj.close()
+
+    print("Save TextGrid to {output} ".format(output=outputFile))
+    tierName="Sentences"
+    if os.path.isfile(outputFile):
+        tg = tgio.openTextgrid(outputFile)
+        if tierName in tg.tierDict:
+            tierName=tierName+datetime.now().strftime("%m%d%Y%H%M%S")
+    else:
+        tg = tgio.Textgrid()    
+    wordTier = tgio.IntervalTier(tierName, entryList, 0, tMax)
+    tg.addTier(wordTier)
+    tg.save(outputFile)
 
 	
 def main(args):
@@ -54,42 +83,29 @@ def main(args):
     args = parser.parse_args()
     if not validate(args):
         return 1
-    base = os.path.splitext(args.source_path)[0]
-    srtFile= "{base}.{format}".format(base=base, format='srt')
-    isFile=os.path.isfile(srtFile)
-    if not isFile:
-        srtFile= "{base}.{format}".format(base=base, format='SRT')
-        isFile=os.path.isfile(srtFile)
-    
-    if isFile:
-        srtFileObj=open(srtFile)
-        subs = parse(srtFileObj.read())
-        outputFile=args.output
-        if not outputFile:
-            outputFile = "{base}.{format}".format(base=base, format='TextGrid')
-            
-        entryList=[]
-        tMax=0
-        for sub in subs:
-            startTime=sub.start.total_seconds()
-            endTime=sub.end.total_seconds()
-            label=sub.content
-            intTier=(startTime,endTime,label)
-            entryList.append(intTier)
-            tMax=endTime
-        srtFileObj.close()
 
-        print("Save TextGrid to {output} ".format(output=outputFile))
-        tierName="Sentences"
-        if os.path.isfile(outputFile):
-            tg = tgio.openTextgrid(outputFile)
-            if tierName in tg.tierDict:
-                tierName=tierName+datetime.now().strftime("%m%d%Y%H%M%S")
+    if os.path.isfile(args.source_path):
+        #source path is a file
+        base = os.path.splitext(args.source_path)[0]
+        srtFile= "{base}.{format}".format(base=base, format='srt')
+        srtFileExsist=os.path.isfile(srtFile)
+        if not srtFileExsist:
+            print("Error:srt file is not exsist.")
+            return 1
         else:
-            tg = tgio.Textgrid()    
-        wordTier = tgio.IntervalTier(tierName, entryList, 0, tMax)
-        tg.addTier(wordTier)
-        tg.save(outputFile)
+            outputFile=args.output
+            if not outputFile:
+                outputFile = "{base}.{format}".format(base=base, format='TextGrid')
+            srtToGrid(srtFile,outputFile)
+    
+    else:
+        #source path is a dir
+        folder=os.path.dirname(args.source_path)
+        srtFiles = glob.glob(os.path.join(folder, '*.srt'))
+        for srtFile in srtFiles:
+            base = os.path.splitext(srtFile)[0]
+            outputFile = "{base}.{format}".format(base=base, format='TextGrid')
+            srtToGrid(srtFile,outputFile)
     return 0
 
 if __name__ == '__main__':

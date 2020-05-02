@@ -30,6 +30,7 @@
 #pip3 install praat-parselmouth praatio
 import argparse
 import os
+import glob
 import parselmouth
 import numpy as np
 from praatio import tgio
@@ -60,6 +61,24 @@ def pitchToEntryList(pitch):
                 syllableOn=True
        
     return entryList
+def wavFileToGrid(wavFile,outputFile):
+    snd = parselmouth.Sound(wavFile)
+    pitch = snd.to_pitch()
+    print("Get entryList for TextGrid From {file} by pitch".format(file=wavFile))
+    entryList=pitchToEntryList(pitch) 
+
+    print("Save TextGrid to {output} ".format(output=outputFile))
+    tierName="Pitch"
+    if os.path.isfile(outputFile):
+        tg = tgio.openTextgrid(outputFile)
+        if tierName in tg.tierDict:
+            tierName=tierName+datetime.now().strftime("%m%d%Y%H%M%S")
+    else:
+        tg = tgio.Textgrid()    
+    wordTier = tgio.IntervalTier(tierName, entryList, 0, pairedWav=wavFile)
+    tg.addTier(wordTier)
+    tg.save(outputFile)
+
 
 def validate(args):
     """
@@ -68,6 +87,10 @@ def validate(args):
     if not args.source_path:
         print("Error: You need to specify a source path.")
         return False
+    else:
+        if not os.path.exists(args.source_path):
+            print("Error: Source path is not a folder or file.")
+            return False       
 
     return True    
 
@@ -78,33 +101,27 @@ def main(args):
     args = parser.parse_args()
     if not validate(args):
         return 1
-    base = os.path.splitext(args.source_path)[0]
-    wavFile= "{base}.{format}".format(base=base, format='wav')
-    isFile=os.path.isfile(wavFile)
-    if not isFile:
-        wavFile= "{base}.{format}".format(base=base, format='WAV')
-        isFile=os.path.isfile(wavFile)
-        
-    if isFile:
-        outputFile=args.output
-        if not outputFile:
-            outputFile = "{base}.{format}".format(base=base, format='TextGrid')
-        snd = parselmouth.Sound(wavFile)
-        pitch = snd.to_pitch()
-        print("Get entryList for TextGrid From {file} by pitch".format(file=wavFile))
-        entryList=pitchToEntryList(pitch) 
-
-        print("Save TextGrid to {output} ".format(output=outputFile))
-        tierName="Pitch"
-        if os.path.isfile(outputFile):
-            tg = tgio.openTextgrid(outputFile)
-            if tierName in tg.tierDict:
-                tierName=tierName+datetime.now().strftime("%m%d%Y%H%M%S")
+    if os.path.isfile(args.source_path):
+        #source path is a file
+        base = os.path.splitext(args.source_path)[0]
+        wavFile= "{base}.{format}".format(base=base, format='wav')
+        wavFileExsist=os.path.isfile(wavFile)
+        if not wavFileExsist:
+            print("Error:Wav file is not exsist.")
+            return 1
         else:
-            tg = tgio.Textgrid()    
-        wordTier = tgio.IntervalTier(tierName, entryList, 0, pairedWav=wavFile)
-        tg.addTier(wordTier)
-        tg.save(outputFile)
+            outputFile=args.output
+            if not outputFile:
+                outputFile = "{base}.{format}".format(base=base, format='TextGrid')
+            wavFileToGrid(wavFile,outputFile)
+    else:
+        #source path is a dir
+        folder=os.path.dirname(args.source_path)
+        wavFiles = glob.glob(os.path.join(folder, '*.wav'))
+        for wavFile in wavFiles:
+            base = os.path.splitext(wavFile)[0]
+            outputFile = "{base}.{format}".format(base=base, format='TextGrid')
+            wavFileToGrid(wavFile,outputFile)
     return 0
 
 if __name__ == '__main__':
