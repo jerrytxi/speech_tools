@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-#  src2textgrid.py
+#  srt2textgrid.py
 #  
 #License: The MIT License (MIT) 
 # 
