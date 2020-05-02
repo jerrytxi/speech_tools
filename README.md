@@ -15,7 +15,6 @@
 
 ```
 $ python3 cc2shengyun.py 需要转换的汉字
-
 $ xu1 yao4 zhuan3 huan4 de han4 zi4
 
 ```
@@ -28,9 +27,7 @@ $ xu1 yao4 zhuan3 huan4 de han4 zi4
 ### Usage
 ```
 $ python3 wav2srt.py -h
-
 $ python3 wav2srt.py --list-languages
-
 $ python3 wav2srt.py path/to/wav/files/ -S zh-CN
 ```
 ## python/srt2textgrid.py
@@ -41,9 +38,7 @@ $ python3 wav2srt.py path/to/wav/files/ -S zh-CN
 ### Usage 
 ```
 $ python3 srt2textgrid.py -h
-
 $ python3 srt2textgrid.py path/to/srt/files/
-
 $ python3 srt2textgrid.py path/to/file.srt
 ```
 
@@ -55,10 +50,9 @@ $ python3 srt2textgrid.py path/to/file.srt
 ### Usage 
 ```
 $ python3 wavsplit2textgrid.py -h
-
 $ python3 wavsplit2textgrid.py path/to/wav/files/
-
 $ python3 wavsplit2textgrid.py path/to/file.wav
+```
 ### License
 
 MIT
