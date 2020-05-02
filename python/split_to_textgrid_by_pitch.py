@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-#  src2textgrid.py
-#  
+#  split_to_textgrid_by_pitch.py
+# 
 #License: The MIT License (MIT) 
 # 
-#Copyright 2018 jerrytxi@gmail.com 
+#Copyright 2020 jerrytxi@gmail.com 
 #
 #Permission is hereby granted, free of charge, to any person obtaining 
 #a copy of this software and associated documentation 
@@ -25,14 +25,42 @@
 #CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
 #TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
 #SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#  
-import os
-import os.path
-from praatio import tgio
-from datetime import timedelta
-from srt import parse
-import sys
+#
+#this script depand on parselmouth praatio
+#pip3 install praat-parselmouth praatio
 import argparse
+import os
+import parselmouth
+import numpy as np
+from praatio import tgio
+from datetime import datetime
+def pitchToEntryList(pitch):
+    """Get EntryList for TextGrid from a pitch object.
+        Args:
+            pitch (parselmouth.Pitch): pitch object by praat
+        Returns:
+            a list like [(startV1, endV1, label1), (startV2, endV2, label2), ...]
+    """
+    startTime=0.00
+    endTime=0.00
+    syllableOn=0
+    syllableCnt=1
+    entryList=[]
+    for i in range(1,pitch.n_frames):
+        pitchValue=pitch.get_value_in_frame(i)
+        if np.isnan(pitchValue):
+            if syllableOn==True:
+                endTime=pitch.get_time_from_frame_number(i-1)
+                entryList.append((startTime,endTime,"s"+str(syllableCnt)))
+                syllableCnt+=1
+                syllableOn=False
+        else:
+            if syllableOn==False:
+                startTime=pitch.get_time_from_frame_number(i)
+                syllableOn=True
+       
+    return entryList
+
 def validate(args):
     """
     Check that the CLI arguments are valid.
@@ -42,52 +70,39 @@ def validate(args):
         return False
 
     return True    
- 
 
-	
 def main(args):
     parser = argparse.ArgumentParser()
-    parser.add_argument('source_path', help="Path to the srt file to textGrid.\
-    You can use autosub to generate src from a wav file.",nargs='?')
-    parser.add_argument('-o', '--output',help="Output path for subtitles (by default, \
-    TextGrid are saved in the same directory and name as the source path)")
+    parser.add_argument('source_path', help="Path to the wav file to textGrid",nargs='?')
+    parser.add_argument('-o', '--output',help="Output path for subtitles (by default, TextGrid are saved in the same directory and name as the source path)")
     args = parser.parse_args()
     if not validate(args):
         return 1
     base = os.path.splitext(args.source_path)[0]
-    srtFile= "{base}.{format}".format(base=base, format='srt')
-    isFile=os.path.isfile(srtFile)
+    wavFile= "{base}.{format}".format(base=base, format='wav')
+    isFile=os.path.isfile(wavFile)
     if not isFile:
-        srtFile= "{base}.{format}".format(base=base, format='SRT')
-        isFile=os.path.isfile(srtFile)
-    
+        wavFile= "{base}.{format}".format(base=base, format='WAV')
+        isFile=os.path.isfile(wavFile)
+        
     if isFile:
-        srtFileObj=open(srtFile)
-        subs = parse(srtFileObj.read())
         outputFile=args.output
         if not outputFile:
             outputFile = "{base}.{format}".format(base=base, format='TextGrid')
-            
-        entryList=[]
-        tMax=0
-        for sub in subs:
-            startTime=sub.start.total_seconds()
-            endTime=sub.end.total_seconds()
-            label=sub.content
-            intTier=(startTime,endTime,label)
-            entryList.append(intTier)
-            tMax=endTime
-        srtFileObj.close()
+        snd = parselmouth.Sound(wavFile)
+        pitch = snd.to_pitch()
+        print("Get entryList for TextGrid From {file} by pitch".format(file=wavFile))
+        entryList=pitchToEntryList(pitch) 
 
         print("Save TextGrid to {output} ".format(output=outputFile))
-        tierName="Sentences"
+        tierName="Pitch"
         if os.path.isfile(outputFile):
             tg = tgio.openTextgrid(outputFile)
             if tierName in tg.tierDict:
                 tierName=tierName+datetime.now().strftime("%m%d%Y%H%M%S")
         else:
             tg = tgio.Textgrid()    
-        wordTier = tgio.IntervalTier(tierName, entryList, 0, tMax)
+        wordTier = tgio.IntervalTier(tierName, entryList, 0, pairedWav=wavFile)
         tg.addTier(wordTier)
         tg.save(outputFile)
     return 0
