@@ -46,7 +46,7 @@ $ python3 srt2textgrid.py path/to/file.srt
 #### create textgrid tier from wav files split by pitch
 ### Installation
 1. Install praatio and parselmouth
-2. Run `pip3 install parselmouth praatio`.
+2. Run `pip3 install praat-parselmouth praatio`.
 ### Usage 
 ```
 $ python3 wavsplit2textgrid.py -h

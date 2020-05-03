@@ -52,8 +52,9 @@ def pitchToEntryList(pitch):
         if np.isnan(pitchValue):
             if syllableOn==True:
                 endTime=pitch.get_time_from_frame_number(i-1)
-                entryList.append((startTime,endTime,"s"+str(syllableCnt)))
-                syllableCnt+=1
+                if endTime > startTime:
+                    entryList.append((startTime,endTime,"s"+str(syllableCnt)))
+                    syllableCnt+=1
                 syllableOn=False
         else:
             if syllableOn==False:
