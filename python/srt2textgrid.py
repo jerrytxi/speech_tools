@@ -28,11 +28,15 @@
 #  
 import os
 import glob
-from praatio import tgio
-from datetime import datetime
-from srt import parse
-import sys
 import argparse
+from datetime import datetime
+try:
+    from praatio import tgio
+    from srt import parse
+except ValueError:
+    print("autosub not installed please run 'pip3 install srt praatio'.")
+
+
 def validate(args):
     """
     Check that the CLI arguments are valid.

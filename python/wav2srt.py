@@ -25,10 +25,15 @@
 #CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
 #TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
 #SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#  
+#
 import argparse
 import os
 import glob
+try:
+    import autosub
+except ValueError:
+    print("autosub not installed please run 'pip install autosub'.")
+        
 def validate(args):
     """
     Check that the CLI arguments are valid.

@@ -31,10 +31,14 @@
 import argparse
 import os
 import glob
-import parselmouth
 import numpy as np
-from praatio import tgio
 from datetime import datetime
+try:
+    import parselmouth
+    from praatio import tgio
+except ValueError:
+    print("modules request not installed please run 'pip3 install praat-parselmouth praatio'.")
+
 def pitchToEntryList(pitch):
     """Get EntryList for TextGrid from a pitch object.
         Args:
