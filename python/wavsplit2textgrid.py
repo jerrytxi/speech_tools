@@ -28,10 +28,13 @@
 #
 #this script depand on parselmouth praatio
 #pip3 install praat-parselmouth praatio
+# praatio 版本5.1.1
+
 import argparse
 import os
 import glob
 import numpy as np
+from praatio import textgrid as tgio
 from datetime import datetime
 try:
     import parselmouth
@@ -56,9 +59,9 @@ def pitchToEntryList(pitch):
         if np.isnan(pitchValue):
             if syllableOn==True:
                 endTime=pitch.get_time_from_frame_number(i-1)
-                if endTime > startTime:
+                if endTime!=startTime:
                     entryList.append((startTime,endTime,"s"+str(syllableCnt)))
-                    syllableCnt+=1
+                syllableCnt+=1
                 syllableOn=False
         else:
             if syllableOn==False:
@@ -79,10 +82,11 @@ def wavFileToGrid(wavFile,outputFile):
         if tierName in tg.tierDict:
             tierName=tierName+datetime.now().strftime("%m%d%Y%H%M%S")
     else:
-        tg = tgio.Textgrid()    
-    wordTier = tgio.IntervalTier(tierName, entryList, 0, pairedWav=wavFile)
+        tg = tgio.Textgrid()
+    print(entryList)   
+    wordTier = tgio.IntervalTier(tierName, entryList)
     tg.addTier(wordTier)
-    tg.save(outputFile)
+    tg.save(outputFile,'long_textgrid',True)
 
 
 def validate(args):
