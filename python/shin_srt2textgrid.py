@@ -1,40 +1,22 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-#
-#  srt2textgrid.py
-#  
-#License: The MIT License (MIT) 
-# 
-#Copyright 2018 jerrytxi@gmail.com 
-#
-#Permission is hereby granted, free of charge, to any person obtaining 
-#a copy of this software and associated documentation 
-#files (the "Software"), to deal in the Software without restriction, 
-#including without limitation the rights to #use, copy, modify, merge, 
-#publish, distribute, sublicense, and/or sell copies of the Software, 
-#and to permit persons to whom the Software is furnished to do so, 
-#subject to the following conditions:
-#
-#The above copyright notice and this permission notice shall be included
- #in all copies or substantial portions of the Software.
-#
-#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS 
-#OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
-#MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
-#IN NO EVENT SHALL THE AUTHORS OR #COPYRIGHT HOLDERS BE LIABLE FOR ANY 
-#CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, 
-#TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
-#SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-#praatio 版本5.1.1
-
-import os
-import glob
-from praatio import textgrid as tgio
-from datetime import datetime
-from srt import parse
-import sys
+#This script is used to call Whisper model to execute speech-to-text task
+#mainly transribing Chinese speech
+#the transcription will be saved in srt format,
+#and then transfer to textgrid format for phonetic analysis.
+#This script will repeat the tasks above for all audio files and srt files in the same folder.
+#created by dianqing82@gmail.com, 2025 (version 2025-03-05)
 import argparse
+import os
+from datetime import datetime
+try:
+    from praatio import textgrid as tgio
+    from srt import parse
+except ValueError:
+    print("modules request not installed please run 'pip3 install praatio srt'.")
+    exit(1)
+debug_output=False
+
 def validate(args):
+    global debug_output
     """
     Check that the CLI arguments are valid.
     """
@@ -44,11 +26,41 @@ def validate(args):
     else:
         if not os.path.exists(args.source_path):
             print("Error: Source path is not a folder or file.")
-            return False       
+            return False
+    if not os.path.isdir(args.source_path):
+            if not args.source_path.endswith(".srt"):
+                print("Error: Source file is not a srt file")
+                return False
+    if args.debug:   
+        debug_output=True
+    return True    
+def main(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('source_path', help="Path to the mp3 file or path to mp3 file's folder",nargs='?')
+    parser.add_argument('-d', '--debug',help="Debug mode will out put debug messages",action='store_true')      
+    args = parser.parse_args()
+    if not validate(args):
+        return 1
+    audio_path =  args.source_path    #请替换为你的音频文件路径
+    audio_path = audio_path.strip("'")
+    if not os.path.exists(audio_path):
+        print("Error: Source path is not a folder or file.")
+        exit(1)
+    if os.path.isdir(audio_path):
+        # 遍历源目录中的文件
+        for filename in os.listdir(audio_path):
+            if filename.endswith(".srt"):
+                srt_file = os.path.join(audio_path, filename)
+                textgrid_file=covert_srt_to_textgrid(srt_file)
+        exit(0)
+    else:
+        srt_file=audio_path
+        textgrid_file=covert_srt_to_textgrid(srt_file)
+        print(f"已将 {srt_file} 转换为 {textgrid_file}")
+        exit(0)
 
-    return True  
 
-def srtToGrid(srtFile,outputFile):
+def covert_srt_to_textgrid(srtFile):
     srtFileObj=open(srtFile)
     subs = parse(srtFileObj.read())
     entryList=[]
@@ -61,7 +73,7 @@ def srtToGrid(srtFile,outputFile):
         entryList.append(intTier)
         tMax=endTime
     srtFileObj.close()
-
+    outputFile=os.path.splitext(srtFile)[0]+".TextGrid"
     print("Save TextGrid to {output} ".format(output=outputFile))
     tierName="s2t"
     if os.path.isfile(outputFile):
@@ -69,45 +81,19 @@ def srtToGrid(srtFile,outputFile):
         if tierName in tg.tierDict:
             tierName=tierName+datetime.now().strftime("%m%d%Y%H%M%S")
     else:
-        tg = tgio.Textgrid()    
-    wordTier = tgio.IntervalTier(tierName, entryList, 0, tMax)
+        tg = tgio.Textgrid()
+    if debug_output:
+        print("srtFile:",srtFile)
+        print("entryList:",entryList)
+    try:
+        wordTier = tgio.IntervalTier(tierName, entryList, 0, tMax)
+    except Exception as e:  
+        print("Error: The srt file is not valid.")
+        return None 
     tg.addTier(wordTier)
-    tg.save(outputFile,'long_textgrid', True)
+    tg.save(outputFile,'long_textgrid', True) 
+    return outputFile
 
-	
-def main(args):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('source_path', help="Path to the srt file to textGrid.\
-    You can use autosub to generate src from a wav file.",nargs='?')
-    parser.add_argument('-o', '--output',help="Output path for subtitles (by default, \
-    TextGrid are saved in the same directory and name as the source path)")
-    args = parser.parse_args()
-    if not validate(args):
-        return 1
-
-    if os.path.isfile(args.source_path):
-        #source path is a file
-        base = os.path.splitext(args.source_path)[0]
-        srtFile= "{base}.{format}".format(base=base, format='srt')
-        srtFileExsist=os.path.isfile(srtFile)
-        if not srtFileExsist:
-            print("Error:srt file is not exsist.")
-            return 1
-        else:
-            outputFile=args.output
-            if not outputFile:
-                outputFile = "{base}.{format}".format(base=base, format='TextGrid')
-            srtToGrid(srtFile,outputFile)
-    
-    else:
-        #source path is a dir
-        folder=os.path.dirname(args.source_path)
-        srtFiles = glob.glob(os.path.join(folder, '*.srt'))
-        for srtFile in srtFiles:
-            base = os.path.splitext(srtFile)[0]
-            outputFile = "{base}.{format}".format(base=base, format='TextGrid')
-            srtToGrid(srtFile,outputFile)
-    return 0
 
 if __name__ == '__main__':
     import sys
